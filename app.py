@@ -1,54 +1,53 @@
-from re import DEBUG, sub
-from flask import Flask, render_template, request, redirect, send_file, url_for
-from werkzeug.utils import secure_filename, send_from_directory
+from flask import Flask, flash, request, redirect, url_for, render_template
 import os
-import subprocess
-
+from werkzeug.utils import secure_filename
+ 
 app = Flask(__name__)
-
-
-uploads_dir = os.path.join(app.instance_path, 'uploads')
-
-os.makedirs(uploads_dir, exist_ok=True)
-
-@app.route("/")
-def hello_world():
+ 
+UPLOAD_FOLDER = 'static/uploads/'
+ 
+app.secret_key = "secret key"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+ 
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+ 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+     
+ 
+@app.route('/')
+def home():
     return render_template('index.html')
-
-
-@app.route("/detect", methods=['POST'])
-def detect():
-    if not request.method == "POST":
-        return
-    video = request.files['video']
-    video.save(os.path.join(uploads_dir, secure_filename(video.filename)))
-    print(video)
-    subprocess.run("ls")
-    subprocess.run(['python3', 'detect.py', '--source', os.path.join(uploads_dir, secure_filename(video.filename))])
-
-    # return os.path.join(uploads_dir, secure_filename(video.filename))
-    obj = secure_filename(video.filename)
-    return obj
-
-@app.route("/opencam", methods=['GET'])
-def opencam():
-    print("here")
-    subprocess.run(['python3', 'detect.py', '--source', '0'])
-    return "done"
+ 
+@app.route('/', methods=['POST'])
+def upload_image():
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    file = request.files['file']
+    if file.filename == '':
+        flash('No image selected for uploading')
+        return redirect(request.url)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        #print('upload_image filename: ' + filename)
+        flash('Image successfully uploaded and displayed below')
+        return render_template('index.html', filename=filename)
+    else:
+        flash('Allowed image types are - png, jpg, jpeg, gif')
+        return redirect(request.url)
+ 
+@app.route('/display/<filename>')
+def display_image(filename):
+    #print('display_image filename: ' + filename)
+    os.system(f'python detect.py --weights best.pt --conf 0.4 --source {os.path.join(app.config["UPLOAD_FOLDER"], filename)}').eval()
+    return redirect(url_for('static', filename='uploads/' + filename), code=301)
+ 
+if __name__ == "__main__":
+    app.run(debug=True)
     
+    #os.system('python detect.py --weights best.pt --conf 0.4 --source C:\Users\ASUS\OneDrive\Documents\internship-project\static\uploads\B.jpg').eval()
+    #model.eval()
 
-@app.route('/return-files', methods=['GET'])
-def return_file():
-    obj = request.args.get('obj')
-    loc = os.path.join("runs/detect", obj)
-    print(loc)
-    try:
-        return send_file(os.path.join("runs/detect", obj), attachment_filename=obj)
-        # return send_from_directory(loc, obj)
-    except Exception as e:
-        return str(e)
-
-# @app.route('/display/<filename>')
-# def display_video(filename):
-# 	#print('display_video filename: ' + filename)
-# 	return redirect(url_for('static/video_1.mp4', code=200))
