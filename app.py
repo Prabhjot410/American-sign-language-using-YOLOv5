@@ -14,7 +14,9 @@ ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
  
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-     
+
+def predict(img_path):
+    os.system(f"python detect.py --weights best.pt --conf 0.4 --source {img_path}")     
  
 @app.route('/')
 def home():
@@ -42,12 +44,13 @@ def upload_image():
 @app.route('/display/<filename>')
 def display_image(filename):
     #print('display_image filename: ' + filename)
-    os.system(f'python detect.py --weights best.pt --conf 0.4 --source {os.path.join(app.config["UPLOAD_FOLDER"], filename)}').eval()
-    return redirect(url_for('static', filename='uploads/' + filename), code=301)
+    os.system(f'python yolov5/detect.py --weights best.pt --conf 0.4 --source {os.path.join(app.config["UPLOAD_FOLDER"], filename)}')
+    import time
+    time.sleep(20)
+    os.system("move ./yolov5/runs/detect/exp ./static/process/exp")
+    return redirect(url_for('static', filename=f"./static/process/exp/{filename}"), code=200)
  
 if __name__ == "__main__":
     app.run(debug=True)
     
-    #os.system('python detect.py --weights best.pt --conf 0.4 --source C:\Users\ASUS\OneDrive\Documents\internship-project\static\uploads\B.jpg').eval()
-    #model.eval()
 
