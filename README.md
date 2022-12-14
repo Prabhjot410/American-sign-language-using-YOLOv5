@@ -1,1 +1,2 @@
-# American-sign-language-using-YOLOv5
+# Sign Language using YOLOv5
+
