@@ -1,6 +1,7 @@
 from flask import Flask, flash, request, redirect, url_for, render_template
 import os
 from werkzeug.utils import secure_filename
+import shutil
 
 app = Flask(__name__)
 
@@ -31,8 +32,12 @@ def upload_image():
         flash('No image selected for uploading')
         return redirect(request.url)
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)    # secure file size
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))    # photo will get saved in static
+        filename = secure_filename(file.filename)
+        # secure file size
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(r"static\process\exp"):
+            shutil.rmtree(r"static\process\exp", ignore_errors=True)
+        file.save(path)    # photo will get saved in static
         #print('upload_image filename: ' + filename)
         flash('Image successfully uploaded and displayed below')
         return render_template('index.html', filename=filename)
